@@ -1,5 +1,7 @@
 # ragdoll
 
+[![CI](https://github.com/manelfideles/ragdoll/actions/workflows/ci.yml/badge.svg)](https://github.com/manelfideles/ragdoll/actions/workflows/ci.yml)
+
 A platform for creating RAG pipelines. Create a project, add documents, ask questions about them.
 
 Everything runs on your machine: parsing, chunking, indexing, storage. The one exception is token
@@ -19,14 +21,24 @@ measure the project, stuff the prompt below the threshold, retrieve above it.
 ## Quick start
 
 ```sh
+cp .env.example .env  # then add your key
 make install          # sync the virtualenv from the lockfile
 make ingest           # parse the corpus, count tokens, print the routing decision
-make check            # ruff, ty, pytest
+make ci               # exactly what CI runs: ruff, ruff format --check, ty, pytest
 make help             # every target
 ```
 
-`make ingest` needs `ANTHROPIC_API_KEY` for exact token counts. Without it you get approximate counts,
-clearly labelled, and the route it prints is a guess. `make ingest-offline` skips the API deliberately.
+`make ingest` needs `ANTHROPIC_API_KEY` for exact token counts, read from `.env` or the shell — an
+exported value wins over the file. Without a key you get approximate counts, clearly labelled, and the
+route it prints is a guess. `make ingest-offline` skips the API deliberately.
+
+`.env` is gitignored and no value read from it is ever printed. Copy `.env.example` to start.
+
+## CI
+
+One job, `quality`, on every pull request and on pushes to `main`: `ruff check`, `ruff format --check`,
+`ty check`, `pytest`. It runs with **no API key**, so the suite must pass with no credentials — that
+keeps it fast, free, and safe on a fork's pull request. `make ci` runs the same four commands locally.
 
 ## Layout
 
@@ -37,9 +49,11 @@ packages/pipeline/          python — ingestion, retrieval, evaluation
     parse.py                pdf → text (pypdf; to be replaced by a layout-aware parser)
     tokens.py               exact counts via the API, approximate offline
     cache.py                on-disk cache keyed by size and mtime
+    config.py               .env loading; shell beats file, values never logged
     cli.py                  the `ragdoll` command
   tests/
 corpus/                     local documents, gitignored
+.github/workflows/ci.yml    the `quality` job
 ```
 
 ## Status

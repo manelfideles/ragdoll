@@ -2,7 +2,7 @@
 # Everything here runs locally. Nothing deploys.
 
 .DEFAULT_GOAL := help
-.PHONY: help install ingest ingest-offline route test lint fmt typecheck check clean explainer
+.PHONY: help install ingest ingest-offline ingest-fresh route test lint fmt fmt-check typecheck check ci clean explainer
 
 UV := uv
 
@@ -38,7 +38,12 @@ fmt: ## Format with ruff
 typecheck: ## Type check with ty
 	$(UV) run ty check
 
-check: lint typecheck test ## Everything the CI would run
+fmt-check: ## Fail if formatting is off (what CI runs)
+	$(UV) run ruff format --check .
+
+check: lint typecheck test ## Everything, quickly, for local use
+
+ci: lint fmt-check typecheck test ## Exactly what the CI 'quality' job runs
 
 explainer: ## Open the newest HTML explainer
 	./open-explainer

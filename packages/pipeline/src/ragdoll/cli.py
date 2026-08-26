@@ -17,10 +17,17 @@ from rich.table import Table
 
 from ragdoll import routing, tokens
 from ragdoll.cache import IngestCache
+from ragdoll.config import load_env
 from ragdoll.parse import find_pdfs, parse_pdf
 
 app = typer.Typer(add_completion=False, help="ragdoll — build and measure RAG pipelines locally.")
 console = Console()
+
+
+@app.callback()
+def main() -> None:
+    """Load local configuration before any command runs."""
+    load_env()
 
 
 @dataclass(frozen=True, slots=True)

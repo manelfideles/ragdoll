@@ -1,0 +1,56 @@
+name: CI
+
+# "on push to MR": pushes to a branch with an open pull request are covered by the
+# pull_request trigger, and pushes to main are covered separately so the default
+# branch is never left unverified.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push to the same branch cancels the previous run. Nothing is gained by
+# finishing a check against code that has already been replaced.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python
+        run: uv python install
+
+      # --locked fails if uv.lock is out of date with the pyproject files, so a
+      # dependency added without relocking is caught here rather than at runtime.
+      - name: Sync dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Lint (ruff)
+        run: uv run ruff check --output-format=github .
+
+      - name: Format (ruff)
+        run: uv run ruff format --check .
+
+      - name: Type check (ty)
+        run: uv run ty check
+
+      # No ANTHROPIC_API_KEY is provided on purpose. The suite must pass with no
+      # credentials, which keeps it fast, free and safe to run on a fork's pull
+      # request. A test that needs the network belongs behind a marker, not here.
+      - name: Tests (pytest)
+        run: uv run pytest
