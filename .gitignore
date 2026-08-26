@@ -12,3 +12,10 @@ __pycache__/
 corpus/**/*.txt
 corpus/**/*.jsonl
 .chunks/
+
+# uv / python
+.venv/
+*.egg-info/
+.ragdoll/
+.pytest_cache/
+.ruff_cache/

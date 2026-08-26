@@ -1,0 +1,173 @@
+"""The ragdoll command line.
+
+Stage one of ingestion only: parse each document, count its tokens, and report the
+routing decision for the project as a whole. No chunking and no indexing yet, because
+neither can be scored until there is a golden set to score them against.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Annotated
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from ragdoll import routing, tokens
+from ragdoll.cache import IngestCache
+from ragdoll.parse import find_pdfs, parse_pdf
+
+app = typer.Typer(add_completion=False, help="ragdoll — build and measure RAG pipelines locally.")
+console = Console()
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentStat:
+    """One document's measurements, whether freshly computed or read from cache."""
+
+    path: Path
+    pages: int
+    chars: int
+    tokens: int
+    exact: bool
+    cached: bool
+
+    @property
+    def tokens_per_page(self) -> int | None:
+        return self.tokens // self.pages if self.pages else None
+
+
+@app.command()
+def ingest(
+    directory: Annotated[
+        Path, typer.Argument(help="Directory of PDFs to treat as one project.")
+    ] = Path("corpus"),
+    offline: Annotated[
+        bool, typer.Option("--offline", help="Skip the API and use approximate token counts.")
+    ] = False,
+    no_cache: Annotated[
+        bool, typer.Option("--no-cache", help="Re-parse and re-count everything.")
+    ] = False,
+) -> None:
+    """Parse a project's documents, count tokens, and print the routing decision."""
+    if not directory.is_dir():
+        console.print(f"[red]No such directory:[/red] {directory}")
+        raise typer.Exit(1)
+
+    pdfs = find_pdfs(directory)
+    if not pdfs:
+        console.print(f"[yellow]No PDFs found in[/yellow] {directory}")
+        raise typer.Exit(1)
+
+    if not offline and not tokens.has_credentials():
+        console.print(
+            "[yellow]No ANTHROPIC_API_KEY found.[/yellow] Falling back to approximate counts.\n"
+            "Approximate counts must not decide a route. Set a key, or pass --offline to "
+            "silence this.\n"
+        )
+
+    cache = IngestCache.load(Path.cwd())
+    stats: list[DocumentStat] = []
+
+    for pdf in pdfs:
+        cached = None if no_cache else cache.get(pdf)
+        if cached is not None:
+            stats.append(
+                DocumentStat(
+                    path=pdf,
+                    pages=int(cached["pages"]),
+                    chars=int(cached["chars"]),
+                    tokens=int(cached["tokens"]),
+                    exact=bool(cached["exact"]),
+                    cached=True,
+                )
+            )
+            continue
+
+        with console.status(f"parsing {pdf.name}"):
+            document = parse_pdf(pdf)
+        with console.status(f"counting tokens in {pdf.name}"):
+            count = tokens.count_or_estimate(document.text, allow_api=not offline)
+
+        cache.put(
+            pdf,
+            pages=document.pages,
+            chars=document.chars,
+            tokens=count.tokens,
+            exact=count.exact,
+        )
+        stats.append(
+            DocumentStat(
+                path=pdf,
+                pages=document.pages,
+                chars=document.chars,
+                tokens=count.tokens,
+                exact=count.exact,
+                cached=False,
+            )
+        )
+
+    cache.save()
+    _report(directory, stats)
+
+
+def _report(directory: Path, stats: list[DocumentStat]) -> None:
+    table = Table(title=f"Project: {directory}", title_justify="left", header_style="bold")
+    table.add_column("Document")
+    table.add_column("Pages", justify="right")
+    table.add_column("Tokens", justify="right")
+    table.add_column("Tok/page", justify="right")
+    table.add_column("Alone", justify="left")
+
+    total = sum(stat.tokens for stat in stats)
+    all_exact = all(stat.exact for stat in stats)
+
+    for stat in stats:
+        alone = routing.decide(stat.tokens)
+        colour = "cyan" if alone.route is routing.Route.STUFF else "magenta"
+        per_page = stat.tokens_per_page
+        table.add_row(
+            stat.path.name[:44],
+            f"{stat.pages:,}",
+            f"{stat.tokens:,}" if stat.exact else f"~{stat.tokens:,}",
+            f"{per_page:,}" if per_page is not None else "-",
+            f"[{colour}]{alone.route}[/{colour}]",
+        )
+
+    console.print()
+    console.print(table)
+
+    decision = routing.decide(total)
+    verdict = "cyan" if decision.route is routing.Route.STUFF else "magenta"
+    suffix = "" if all_exact else " (approximate)"
+    over = "  (over)" if decision.headroom < 0 else ""
+    console.print()
+    console.print(f"  Whole project   [bold]{total:,}[/bold] tokens{suffix}")
+    console.print(f"  Threshold       {decision.threshold:,}")
+    console.print(f"  Headroom        {decision.headroom:,}{over}")
+    console.print(f"  Route           [bold {verdict}]{decision.route.upper()}[/bold {verdict}]")
+    console.print(f"  Because         {decision.reason}")
+    if not all_exact:
+        console.print(
+            "\n  [yellow]These counts are approximate, so this route is a guess.[/yellow]"
+        )
+    console.print()
+
+
+@app.command()
+def route(
+    total_tokens: Annotated[int, typer.Argument(help="Project size in tokens.")],
+    indexed: Annotated[
+        bool, typer.Option("--indexed", help="Project already has an index (applies hysteresis).")
+    ] = False,
+) -> None:
+    """Ask the routing rule a hypothetical. Useful for probing the boundary."""
+    decision = routing.decide(total_tokens, already_indexed=indexed)
+    console.print(f"[bold]{decision.route.upper()}[/bold] — {decision.reason}")
+    console.print(f"headroom: {decision.headroom:,}")
+
+
+if __name__ == "__main__":
+    app()

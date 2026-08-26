@@ -45,17 +45,23 @@ project, uploads documents, and asks questions about them.
 Four PDFs Manuel owns, held in `corpus/` and gitignored. Not redistributable, so any exercise must
 regenerate derived artefacts from local files rather than committing them.
 
-- **Designing Data-Intensive Applications** — 613 pages, ~245k tokens. Over the threshold on its own.
+- **Designing Data-Intensive Applications** — 613 pages, ~398k tokens (measured, approximate).
+  Over the threshold twice over on its own.
   Use for: the retrieval branch, and contextualising chunks against a section rather than a document.
-- **Fundamentals of Data Engineering** — 544 pages, ~218k tokens. Overlaps DDIA heavily.
+- **Fundamentals of Data Engineering** — 544 pages, ~254k tokens (measured). Overlaps DDIA heavily.
   Use for: precision under near-duplicate content, the hardest retrieval case in the corpus.
-- **Swim Smooth** — 360 pages. Unrelated subject matter.
+- **Swim Smooth** — 360 pages, ~158k tokens (measured). Unrelated subject matter, and the only book
+  that fits under the threshold on its own.
   Use for: the control in project-isolation tests. A leak here is obvious to the eye.
-- **lakehouses.pdf** — 8 pages, ~3k tokens. Far under the threshold.
+- **lakehouses.pdf** — 8 pages, ~14k tokens (measured). Far under the threshold, and by far the
+  densest document at ~1,790 tokens per page against ~650 for DDIA. It is a two-column paper, which
+  is a warning about page counts as a proxy for size.
   Use for: the prompt-stuffing branch of the routing decision.
 
-Total is roughly 610k tokens, so the full corpus as one project is over the threshold while its
-smallest member is well under. Both branches are testable with no synthetic data.
+Total is roughly 824k tokens (approximate, pypdf extraction), so the full corpus as one project is
+over the threshold four times over while its smallest member is well under. Both branches are testable
+with no synthetic data. Re-measure with `make ingest` once an API key is set — these figures come from
+the offline estimator and are expected to move.
 
 ## Wisdom (Communities)
 
