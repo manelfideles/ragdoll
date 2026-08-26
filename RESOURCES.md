@@ -45,23 +45,31 @@ project, uploads documents, and asks questions about them.
 Four PDFs Manuel owns, held in `corpus/` and gitignored. Not redistributable, so any exercise must
 regenerate derived artefacts from local files rather than committing them.
 
-- **Designing Data-Intensive Applications** — 613 pages, ~398k tokens (measured, approximate).
-  Over the threshold twice over on its own.
-  Use for: the retrieval branch, and contextualising chunks against a section rather than a document.
-- **Fundamentals of Data Engineering** — 544 pages, ~254k tokens (measured). Overlaps DDIA heavily.
-  Use for: precision under near-duplicate content, the hardest retrieval case in the corpus.
-- **Swim Smooth** — 360 pages, ~158k tokens (measured). Unrelated subject matter, and the only book
-  that fits under the threshold on its own.
-  Use for: the control in project-isolation tests. A leak here is obvious to the eye.
-- **lakehouses.pdf** — 8 pages, ~14k tokens (measured). Far under the threshold, and by far the
-  densest document at ~1,790 tokens per page against ~650 for DDIA. It is a two-column paper, which
-  is a warning about page counts as a proxy for size.
-  Use for: the prompt-stuffing branch of the routing decision.
+Token counts below are **exact**, from the Claude API `count_tokens` endpoint against `claude-opus-5`,
+over pypdf text extraction. Reproduce with `make ingest-fresh`.
 
-Total is roughly 824k tokens (approximate, pypdf extraction), so the full corpus as one project is
-over the threshold four times over while its smallest member is well under. Both branches are testable
-with no synthetic data. Re-measure with `make ingest` once an API key is set — these figures come from
-the offline estimator and are expected to move.
+| Document | Pages | Tokens | Tok/page | Alone |
+|---|---:|---:|---:|---|
+| Designing Data-Intensive Applications | 613 | 481,052 | 784 | retrieve |
+| Fundamentals of Data Engineering | 544 | 291,260 | 535 | retrieve |
+| Swim Smooth | 360 | 190,181 | 528 | stuff |
+| lakehouses.pdf | 8 | 18,338 | 2,292 | stuff |
+| **Whole corpus** | **1,525** | **980,831** | 643 | **retrieve** |
+
+What each one is for:
+
+- **Designing Data-Intensive Applications** — the retrieval branch, and contextualising chunks against
+  a section rather than a whole document. Nearly 2.5x the threshold on its own.
+- **Fundamentals of Data Engineering** — overlaps DDIA heavily. Precision under near-duplicate content,
+  the hardest retrieval case in the corpus.
+- **Swim Smooth** — unrelated subject matter, so it is the control in project-isolation tests. A leak
+  here is obvious to the eye. Also the most interesting document for routing: at 190,181 tokens it is
+  **9,819 tokens under the threshold**, roughly one chapter from crossing.
+- **lakehouses.pdf** — the prompt-stuffing branch. Also the densest document by far at 2,292 tokens
+  per page against 784 for DDIA, because it is a two-column paper. Page count is a poor proxy for size.
+
+The whole corpus as one project is nearly 5x the threshold; its smallest member is a ninth of it. Both
+branches of the routing decision are testable with no synthetic data.
 
 ## Wisdom (Communities)
 
