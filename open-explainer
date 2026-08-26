@@ -1,0 +1,11 @@
+#!/bin/sh
+# Usage: ./open-explainer        -> opens the newest explainer
+#        ./open-explainer 01     -> opens the explainer starting with 01
+if [ -n "$1" ]; then
+  f=$(ls explainers/"$1"*.html 2>/dev/null | head -1)
+else
+  f=$(ls -t explainers/*.html 2>/dev/null | head -1)
+fi
+[ -z "$f" ] && echo "no explainer found" && exit 1
+echo "opening $f"
+open "$f"

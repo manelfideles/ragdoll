@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 — Do You Even Need RAG?</title>
+<style>
+  :root{
+    --bg:#fbfaf8; --panel:#ffffff; --ink:#1c1a17; --ink-2:#57514a; --ink-3:#8a8279;
+    --rule:#e5e0d8; --accent:#9a3412; --accent-soft:#fdf0e6;
+    --good:#166534; --good-soft:#eaf4ec; --bad:#9f1239; --bad-soft:#fdeef1;
+    --code-bg:#f4f1ec;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#131211; --panel:#1b1a18; --ink:#eeeae4; --ink-2:#b3aca3; --ink-3:#847c73;
+      --rule:#2e2c29; --accent:#f0925e; --accent-soft:#2a1a11;
+      --good:#7fce9a; --good-soft:#14231a; --bad:#f4899f; --bad-soft:#26131a;
+      --code-bg:#232120;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#131211; --panel:#1b1a18; --ink:#eeeae4; --ink-2:#b3aca3; --ink-3:#847c73;
+    --rule:#2e2c29; --accent:#f0925e; --accent-soft:#2a1a11;
+    --good:#7fce9a; --good-soft:#14231a; --bad:#f4899f; --bad-soft:#26131a;
+    --code-bg:#232120;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:44rem;margin:0 auto;padding:4rem 1.5rem 8rem}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+           color:var(--accent);margin:0 0 .9rem}
+  h1{font-family:var(--serif);font-size:2.7rem;line-height:1.1;letter-spacing:-.02em;margin:0 0 1rem;font-weight:600}
+  .standfirst{font-size:1.18rem;color:var(--ink-2);line-height:1.55;margin:0 0 2.5rem;
+              padding-bottom:2.5rem;border-bottom:1px solid var(--rule)}
+  h2{font-family:var(--serif);font-size:1.6rem;line-height:1.2;margin:3.2rem 0 .9rem;font-weight:600;letter-spacing:-.01em}
+  h3{font-size:1rem;margin:2rem 0 .5rem;font-weight:650;letter-spacing:.01em}
+  p{margin:0 0 1.1rem}
+  a{color:var(--accent)}
+  strong{font-weight:650}
+  code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);padding:.12em .38em;border-radius:4px}
+  .lede::first-letter{font-family:var(--serif);font-size:3.1rem;float:left;line-height:.82;
+                      padding:.06em .12em 0 0;color:var(--accent);font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;
+        padding:1.4rem 1.5rem;margin:1.8rem 0}
+  .card > :last-child{margin-bottom:0}
+  .card h3{margin-top:0}
+  .flag{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;
+        padding:1.15rem 1.4rem;margin:1.8rem 0}
+  .flag > :last-child{margin-bottom:0}
+  .flag .tag{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+             color:var(--accent);display:block;margin-bottom:.45rem}
+  figure{margin:2.2rem 0}
+  figcaption{font-size:.83rem;color:var(--ink-3);margin-top:.7rem;text-align:center}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  svg{display:block;max-width:100%;height:auto;margin:0 auto}
+  table{width:100%;border-collapse:collapse;font-size:.94rem}
+  th,td{text-align:left;padding:.62rem .7rem;border-bottom:1px solid var(--rule)}
+  th{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:650}
+  td.num{font-family:var(--mono);white-space:nowrap}
+  .win{color:var(--good);font-weight:650}
+  ol,ul{margin:0 0 1.1rem;padding-left:1.3rem}
+  li{margin-bottom:.45rem}
+  .steps{list-style:none;padding:0;counter-reset:s}
+  .steps li{counter-increment:s;position:relative;padding-left:2.4rem;margin-bottom:.9rem}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:.05rem;width:1.65rem;height:1.65rem;
+    border-radius:50%;background:var(--accent-soft);color:var(--accent);border:1px solid var(--rule);
+    font-family:var(--mono);font-size:.78rem;display:grid;place-items:center;font-weight:650}
+  blockquote{margin:1.6rem 0;padding-left:1.1rem;border-left:2px solid var(--rule);
+             font-family:var(--serif);font-size:1.1rem;color:var(--ink-2);font-style:italic}
+  /* quiz */
+  .quiz{border-top:1px solid var(--rule);margin-top:4rem;padding-top:2.5rem}
+  .q{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:1.35rem 1.5rem;margin:1.4rem 0}
+  .q .qn{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+         display:block;margin-bottom:.5rem}
+  .q p.stem{font-weight:600;margin:0 0 1rem}
+  .opt{display:block;width:100%;text-align:left;font:inherit;font-size:.95rem;color:var(--ink);
+       background:transparent;border:1px solid var(--rule);border-radius:8px;padding:.7rem .9rem;
+       margin-bottom:.5rem;cursor:pointer;transition:border-color .12s,background .12s}
+  .opt:hover:not(.locked){border-color:var(--accent)}
+  .opt.right{border-color:var(--good);background:var(--good-soft)}
+  .opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+  .opt.locked{cursor:default}
+  .fb{display:none;margin-top:.7rem;font-size:.92rem;line-height:1.55;padding:.8rem .95rem;border-radius:8px;
+      background:var(--code-bg);color:var(--ink-2)}
+  .fb.show{display:block}
+  .fb b{color:var(--ink)}
+  .score{position:sticky;bottom:1rem;margin-top:2rem;background:var(--panel);border:1px solid var(--rule);
+         border-radius:10px;padding:.85rem 1.1rem;font-family:var(--mono);font-size:.85rem;text-align:center}
+  footer{margin-top:4rem;padding-top:1.6rem;border-top:1px solid var(--rule);font-size:.85rem;color:var(--ink-3)}
+  footer a{color:var(--ink-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<p class="eyebrow">Explainer 01 · RAG</p>
+<h1>Do you even need RAG?</h1>
+<p class="standfirst">Before you build a retrieval pipeline, you must prove you need one. This is the
+first discipline of RAG engineering, and it changes the shape of your medical coding project.</p>
+
+<p class="lede"><strong>RAG</strong> means Retrieval-Augmented Generation. You search a set of documents
+for the passages that match a question. You put those passages into the prompt. The model answers from
+them. That is the whole idea.</p>
+
+<p>People call RAG an AI technique. It is not. It is a <strong>search</strong> technique with a language
+model attached to the end. Almost every RAG failure is a search failure. Keep this sentence in mind for
+the rest of the project.</p>
+
+<h2>The baseline pipeline</h2>
+
+<p>Anthropic's engineering team describes the standard pipeline in six steps. Learn these names. Every
+later lesson attaches to one of them.</p>
+
+<ol class="steps">
+  <li><strong>Chunk.</strong> Cut each document into small pieces.</li>
+  <li><strong>Embed.</strong> Turn each chunk into a vector. A vector is a list of numbers that records meaning.</li>
+  <li><strong>Index for keywords.</strong> Build a BM25 index. BM25 is a classic algorithm that scores exact word matches.</li>
+  <li><strong>Search by meaning.</strong> Embed the question. Find the chunks with the nearest vectors.</li>
+  <li><strong>Fuse the ranks.</strong> Merge the keyword results and the meaning results into one ordered list.</li>
+  <li><strong>Stuff the prompt.</strong> Put the top chunks into the prompt and ask the model.</li>
+</ol>
+
+<figure>
+<div class="scroll">
+<svg viewBox="0 0 780 250" role="img" aria-label="The RAG pipeline: an offline ingest path and an online query path meeting at the prompt.">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+    <style>
+      .bx{fill:var(--panel);stroke:var(--rule)}
+      .lb{font:600 12px var(--sans);fill:var(--ink)}
+      .sm{font:11px var(--mono);fill:var(--ink-3)}
+      .ln{stroke:var(--ink-3);fill:none;color:var(--ink-3)}
+      .hi{stroke:var(--accent);color:var(--accent)}
+      .zone{fill:none;stroke:var(--rule);stroke-dasharray:4 4}
+      .zt{font:600 10px var(--mono);fill:var(--ink-3);letter-spacing:.1em}
+    </style>
+  </defs>
+
+  <rect class="zone" x="8" y="18" width="512" height="94" rx="9"/>
+  <text class="zt" x="20" y="36">INGEST · RUNS ONCE PER DOCUMENT</text>
+  <rect class="zone" x="8" y="132" width="512" height="94" rx="9"/>
+  <text class="zt" x="20" y="150">QUERY · RUNS ON EVERY QUESTION</text>
+
+  <rect class="bx" x="26" y="48" width="94" height="44" rx="8"/>
+  <text class="lb" x="73" y="70" text-anchor="middle">Document</text>
+  <text class="sm" x="73" y="85" text-anchor="middle">PDF</text>
+
+  <rect class="bx" x="152" y="48" width="88" height="44" rx="8"/>
+  <text class="lb" x="196" y="70" text-anchor="middle">Chunk</text>
+  <text class="sm" x="196" y="85" text-anchor="middle">1</text>
+
+  <rect class="bx" x="272" y="48" width="88" height="44" rx="8"/>
+  <text class="lb" x="316" y="70" text-anchor="middle">Embed</text>
+  <text class="sm" x="316" y="85" text-anchor="middle">2</text>
+
+  <rect class="bx" x="392" y="48" width="106" height="44" rx="8"/>
+  <text class="lb" x="445" y="70" text-anchor="middle">Two indexes</text>
+  <text class="sm" x="445" y="85" text-anchor="middle">3 · vector + BM25</text>
+
+  <line class="ln" x1="122" y1="70" x2="148" y2="70" marker-end="url(#ar)"/>
+  <line class="ln" x1="242" y1="70" x2="268" y2="70" marker-end="url(#ar)"/>
+  <line class="ln" x1="362" y1="70" x2="388" y2="70" marker-end="url(#ar)"/>
+
+  <rect class="bx" x="26" y="162" width="94" height="44" rx="8"/>
+  <text class="lb" x="73" y="184" text-anchor="middle">Question</text>
+  <text class="sm" x="73" y="199" text-anchor="middle">coder asks</text>
+
+  <rect class="bx" x="152" y="162" width="88" height="44" rx="8"/>
+  <text class="lb" x="196" y="184" text-anchor="middle">Search</text>
+  <text class="sm" x="196" y="199" text-anchor="middle">4</text>
+
+  <rect class="bx" x="272" y="162" width="88" height="44" rx="8"/>
+  <text class="lb" x="316" y="184" text-anchor="middle">Fuse</text>
+  <text class="sm" x="316" y="199" text-anchor="middle">5</text>
+
+  <rect class="bx" x="392" y="162" width="106" height="44" rx="8"/>
+  <text class="lb" x="445" y="184" text-anchor="middle">Top chunks</text>
+  <text class="sm" x="445" y="199" text-anchor="middle">5</text>
+
+  <line class="ln" x1="122" y1="184" x2="148" y2="184" marker-end="url(#ar)"/>
+  <line class="ln" x1="242" y1="184" x2="268" y2="184" marker-end="url(#ar)"/>
+  <line class="ln" x1="362" y1="184" x2="388" y2="184" marker-end="url(#ar)"/>
+  <path class="ln" d="M445 96 L445 158" marker-end="url(#ar)"/>
+
+  <rect class="bx hi" x="560" y="86" width="96" height="78" rx="8" style="stroke-width:1.5"/>
+  <text class="lb" x="608" y="118" text-anchor="middle">Prompt</text>
+  <text class="sm" x="608" y="134" text-anchor="middle">6</text>
+
+  <line class="ln hi" x1="502" y1="184" x2="556" y2="140" marker-end="url(#ar)"/>
+  <line class="ln hi" x1="502" y1="70" x2="556" y2="110" stroke-dasharray="3 3"/>
+
+  <rect class="bx" x="690" y="99" width="72" height="52" rx="8"/>
+  <text class="lb" x="726" y="123" text-anchor="middle">Answer</text>
+  <text class="sm" x="726" y="138" text-anchor="middle">+ cites</text>
+  <line class="ln hi" x1="660" y1="125" x2="686" y2="125" marker-end="url(#ar)"/>
+</svg>
+</div>
+<figcaption>Steps 1&ndash;3 run once, when a document is uploaded. Steps 4&ndash;6 run on every question.
+Your platform is mostly the top half. The chat widget is mostly the bottom half.</figcaption>
+</figure>
+
+<h2>The rule that may cancel your pipeline</h2>
+
+<p>Anthropic state a threshold plainly:</p>
+
+<blockquote>If your knowledge base is smaller than 200,000 tokens (about 500 pages of material), you
+can just include the entire knowledge base in the prompt.</blockquote>
+
+<p>A <strong>token</strong> is a piece of a word. Roughly 750 words make 1,000 tokens. Modern Claude
+models accept very large prompts, and <strong>prompt caching</strong> makes the repeated cost small.
+Prompt caching stores the processed prompt on the server so you do not pay full price to send the same
+documents again.</p>
+
+<p>Now apply the rule to your project. The ICD-10-CM Official Guidelines for FY 2026 is about 120 pages.
+That is far under 500 pages. <strong>One coding guideline document does not need RAG.</strong> You could
+paste the whole thing into the prompt and get better answers than a badly built pipeline.</p>
+
+<div class="flag">
+<span class="tag">What this means for the mission</span>
+<p>This is not a reason to abandon the project. It is a reason to be honest about what justifies it. Three
+things push a system past the threshold, and each one is a real feature of your platform:</p>
+<ol>
+  <li><strong>Many documents.</strong> ICD-10-CM, ICD-10-PCS, payer-specific rules, internal policy notes.
+  Ten such documents cross 200,000 tokens easily.</li>
+  <li><strong>Versions.</strong> Coding rules change every October. Coders need the version that applied on
+  the date of service. A pipeline can filter by version. A stuffed prompt cannot, without confusing the model.</li>
+  <li><strong>Citations.</strong> A coder will not trust an answer without the exact source passage.
+  Retrieval hands you the passage as a first-class object you can link to.</li>
+</ol>
+<p>Write these three down. They are the reason your platform exists, and they belong in your README.</p>
+</div>
+
+<h2>Why naive chunking fails</h2>
+
+<p>Step 1 looks trivial. It is the largest source of failure. When you cut a document into pieces, each
+piece loses the story around it.</p>
+
+<div class="card">
+<h3>A concrete example from your own corpus</h3>
+<p>Imagine a chunk that reads:</p>
+<p><code>"Assign code 250 only when the condition is documented as the reason for the encounter. Do not assign it as an additional diagnosis."</code></p>
+<p>Search for <em>"can I code diabetes as a secondary diagnosis"</em> and this chunk may never appear. The
+chunk does not say <strong>diabetes</strong>. It does not say <strong>secondary</strong>. It does not say
+which chapter or which fiscal year it belongs to. The context lived in a heading three pages up, and
+chunking threw the heading away.</p>
+</div>
+
+<p>The fix is <strong>contextual retrieval</strong>. Before you embed a chunk, you ask a cheap model to
+write 50 to 100 tokens that explain where the chunk sits. You put that text in front of the chunk. Then
+you embed and index the combined text. The chunk now carries its own context.</p>
+
+<h2>What actually moves the needle</h2>
+
+<p>Anthropic measured each change on the same task. The metric is the failure rate of retrieval: the share
+of questions where the correct passage did not come back in the top 20 results. Lower is better.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Setup</th><th>Failure rate</th><th>Reduction</th></tr></thead>
+<tbody>
+<tr><td>Embeddings + BM25 (baseline)</td><td class="num">5.7%</td><td class="num">&mdash;</td></tr>
+<tr><td>+ contextual embeddings</td><td class="num">3.7%</td><td class="num win">35%</td></tr>
+<tr><td>+ contextual embeddings + contextual BM25</td><td class="num">2.9%</td><td class="num win">49%</td></tr>
+<tr><td>+ reranking</td><td class="num">1.9%</td><td class="num win">67%</td></tr>
+</tbody>
+</table>
+</div>
+
+<p><strong>Reranking</strong> is a second, slower scoring pass. You retrieve a wide set, perhaps 150 chunks.
+A reranker model scores each one against the question. You keep the best 20. You get accuracy without
+paying to put 150 chunks in the prompt.</p>
+
+<p>Read the table again and notice what is absent. No change of language model. No clever prompt. Every
+gain came from the search half of the system.</p>
+
+<h2>Why you build the test set first</h2>
+
+<p>The table above only exists because someone could measure failure. You cannot improve retrieval you
+cannot score. So the first thing to build is not the ingestion pipeline. It is the <strong>golden
+set</strong>: a list of questions, each paired with the passage that truly answers it.</p>
+
+<p>With a golden set you can compute <strong>recall@k</strong>. Recall@k asks: of all the passages that
+truly answer the question, how many appeared in the top k results? This one number tells you whether a
+change helped or hurt. Without it, you are guessing, and every RAG tutorial you read is guessing with you.</p>
+
+<div class="flag">
+<span class="tag">The order of work</span>
+<p>Golden set &rarr; measure the dumbest possible pipeline &rarr; change one thing &rarr; measure again.
+Never change two things at once. This is the loop that turns a side-project into portfolio evidence,
+because it produces sentences like "recall@5 rose from 0.61 to 0.84 when I added contextual embeddings."</p>
+</div>
+
+<h2>Check yourself</h2>
+<p>Answer before you scroll. Feedback appears at once.</p>
+
+<div class="quiz" id="quiz">
+
+  <div class="q" data-a="1">
+    <span class="qn">Question 1</span>
+    <p class="stem">Your corpus is a single 120-page coding guideline. A colleague asks why you are not just
+    pasting it all into the prompt. What is the strongest honest answer?</p>
+    <button class="opt">RAG is more accurate than a long prompt.</button>
+    <button class="opt">For one document, they are right. RAG is justified by many documents, version filtering, and citations.</button>
+    <button class="opt">The prompt would be too expensive to send.</button>
+    <button class="opt">Language models cannot read documents that long.</button>
+    <div class="fb"><b>Correct answer: the second.</b> Under roughly 200,000 tokens, stuffing the prompt is a
+    legitimate and often better choice, and prompt caching keeps the cost down. Be able to defend the
+    pipeline on scale, versioning, and citations. That honesty is itself a portfolio signal.</div>
+  </div>
+
+  <div class="q" data-a="2">
+    <span class="qn">Question 2</span>
+    <p class="stem">A coder asks about secondary diagnoses. The correct passage exists but never comes back
+    in the results. Where do you look first?</p>
+    <button class="opt">The language model. Try a stronger one.</button>
+    <button class="opt">The prompt. Add clearer instructions.</button>
+    <button class="opt">The chunks. The right passage probably lost the context that made it findable.</button>
+    <button class="opt">The user. Teach them to phrase questions better.</button>
+    <div class="fb"><b>Correct answer: the third.</b> The passage never reached the prompt, so the model and
+    the prompt cannot be at fault. This is a search failure. Chunking is the usual cause.</div>
+  </div>
+
+  <div class="q" data-a="3">
+    <span class="qn">Question 3</span>
+    <p class="stem">What does contextual retrieval add to a chunk before indexing it?</p>
+    <button class="opt">The full document, so nothing is lost.</button>
+    <button class="opt">A larger overlap with the neighbouring chunks.</button>
+    <button class="opt">A summary of the user's question.</button>
+    <button class="opt">50 to 100 tokens, written by a model, explaining where the chunk sits in the document.</button>
+    <div class="fb"><b>Correct answer: the fourth.</b> A short generated preface travels with the chunk into
+    both the vector index and the BM25 index. Overlap is a different and weaker technique.</div>
+  </div>
+
+  <div class="q" data-a="0">
+    <span class="qn">Question 4</span>
+    <p class="stem">You keep both a vector index and a BM25 index. Why keep BM25 at all?</p>
+    <button class="opt">Exact matches. Codes like <code>E11.9</code> and rare terms must match literally, and embeddings blur them.</button>
+    <button class="opt">It is cheaper, so it saves money on every query.</button>
+    <button class="opt">It works when the vector database is offline.</button>
+    <button class="opt">It gives the model a second opinion on the answer.</button>
+    <div class="fb"><b>Correct answer: the first.</b> This matters enormously in medical coding. Embeddings
+    capture meaning and lose precision on identifiers. BM25 scores literal word matches. Fusing both is
+    called hybrid search, and it is the reason the baseline in the table already includes BM25.</div>
+  </div>
+
+  <div class="q" data-a="1">
+    <span class="qn">Question 5</span>
+    <p class="stem">Reranking cut the failure rate from 2.9% to 1.9%. Why not simply put all 150 retrieved
+    chunks in the prompt instead?</p>
+    <button class="opt">The model would refuse a prompt that large.</button>
+    <button class="opt">Cost, latency, and distraction. Irrelevant chunks degrade the answer as well as the bill.</button>
+    <button class="opt">Reranking is more accurate than any language model.</button>
+    <button class="opt">Vector databases cannot return 150 results.</button>
+    <div class="fb"><b>Correct answer: the second.</b> A reranker is the cheap filter between wide retrieval
+    and a narrow prompt. Reranking buys accuracy; keeping the prompt narrow buys speed, cost, and focus.</div>
+  </div>
+
+  <div class="q" data-a="2">
+    <span class="qn">Question 6</span>
+    <p class="stem">It is your first evening on the project. Two hours. What do you build?</p>
+    <button class="opt">The document upload screen and the database schema.</button>
+    <button class="opt">The embeddable chat widget, so there is something to show.</button>
+    <button class="opt">A golden set of questions paired with the passages that answer them.</button>
+    <button class="opt">A comparison of three vector databases.</button>
+    <div class="fb"><b>Correct answer: the third.</b> Every other choice produces work you cannot score.
+    The golden set is what makes the following ten sessions measurable, and it is the artefact that most
+    reviewers of your portfolio will recognise as real engineering.</div>
+  </div>
+
+  <div class="score" id="score">0 / 6 answered</div>
+</div>
+
+<footer>
+<p>Sources: <a href="https://www.anthropic.com/engineering/contextual-retrieval">Contextual Retrieval in AI Systems — Anthropic Engineering</a> ·
+<a href="https://www.evidentlyai.com/llm-guide/rag-evaluation">RAG evaluation guide — Evidently AI</a> ·
+<a href="https://www.cms.gov/files/document/fy-2026-icd-10-cm-coding-guidelines.pdf">ICD-10-CM Official Guidelines FY 2026 — CMS</a></p>
+<p>Explainer 01 · saved in <code>explainers/</code> · see <code>MISSION.md</code> for why this matters.</p>
+</footer>
+
+</div>
+<script>
+(function(){
+  var qs = document.querySelectorAll('.q'), done = 0, right = 0;
+  var score = document.getElementById('score');
+  qs.forEach(function(q){
+    var correct = parseInt(q.dataset.a, 10);
+    var opts = q.querySelectorAll('.opt');
+    var fb = q.querySelector('.fb');
+    opts.forEach(function(o, i){
+      o.addEventListener('click', function(){
+        if (q.dataset.locked) return;
+        q.dataset.locked = '1';
+        opts.forEach(function(x, j){
+          x.classList.add('locked');
+          if (j === correct) x.classList.add('right');
+        });
+        if (i !== correct) o.classList.add('wrong'); else right++;
+        fb.classList.add('show');
+        done++;
+        score.textContent = done + ' / ' + qs.length + ' answered  ·  ' + right + ' correct';
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

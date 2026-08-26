@@ -1,0 +1,9 @@
+# corpus files are large and re-downloadable
+corpus/*.pdf
+.DS_Store
+node_modules/
+.env
+.env.local
+__pycache__/
+*.pyc
+.venv/
