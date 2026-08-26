@@ -223,18 +223,25 @@ That is far under 500 pages. <strong>One coding guideline document does not need
 paste the whole thing into the prompt and get better answers than a badly built pipeline.</p>
 
 <div class="flag">
-<span class="tag">What this means for the mission</span>
-<p>This is not a reason to abandon the project. It is a reason to be honest about what justifies it. Three
-things push a system past the threshold, and each one is a real feature of your platform:</p>
-<ol>
-  <li><strong>Many documents.</strong> ICD-10-CM, ICD-10-PCS, payer-specific rules, internal policy notes.
-  Ten such documents cross 200,000 tokens easily.</li>
-  <li><strong>Versions.</strong> Coding rules change every October. Coders need the version that applied on
-  the date of service. A pipeline can filter by version. A stuffed prompt cannot, without confusing the model.</li>
-  <li><strong>Citations.</strong> A coder will not trust an answer without the exact source passage.
-  Retrieval hands you the passage as a first-class object you can link to.</li>
-</ol>
-<p>Write these three down. They are the reason your platform exists, and they belong in your README.</p>
+<span class="tag">What this means for ragdoll</span>
+<p>This is not a reason to abandon the project. For a platform it is something better: a feature.</p>
+<p>Ragdoll never knows in advance how large a project will be. One user uploads a single memo. Another
+uploads four hundred contracts. A pipeline that retrieves is wrong for the first user and necessary for
+the second. So ragdoll should <strong>measure each project and choose</strong>:</p>
+<ul>
+  <li><strong>Under the threshold.</strong> Skip retrieval. Put every document in the prompt and lean on
+  prompt caching. Fewer moving parts, and no chance of retrieving the wrong passage, because there is no
+  retrieval to get wrong.</li>
+  <li><strong>Over the threshold.</strong> Run the full pipeline.</li>
+</ul>
+<p>Almost no RAG side-project does this. Most retrieve unconditionally, including over corpora small
+enough to fit in one prompt. Building the threshold check makes ragdoll defensible in a way a wrapper
+around a vector database is not, and it gives you a real answer to the hardest interview question:
+<em>when did you decide not to use RAG?</em></p>
+<p>Two more things justify the pipeline once you are over the threshold, and both are platform concerns
+rather than retrieval concerns: <strong>project isolation</strong>, so one project's chunks never surface
+in another project's search, and <strong>citations</strong>, because retrieval hands you the source
+passage as an object you can link to. Write all of this in your README.</p>
 </div>
 
 <h2>Why naive chunking fails</h2>
@@ -243,7 +250,7 @@ things push a system past the threshold, and each one is a real feature of your 
 piece loses the story around it.</p>
 
 <div class="card">
-<h3>A concrete example from your own corpus</h3>
+<h3>A concrete example from the test corpus</h3>
 <p>Imagine a chunk that reads:</p>
 <p><code>"Assign code 250 only when the condition is documented as the reason for the encounter. Do not assign it as an additional diagnosis."</code></p>
 <p>Search for <em>"can I code diabetes as a secondary diagnosis"</em> and this chunk may never appear. The
@@ -304,15 +311,15 @@ because it produces sentences like "recall@5 rose from 0.61 to 0.84 when I added
 
   <div class="q" data-a="1">
     <span class="qn">Question 1</span>
-    <p class="stem">Your corpus is a single 120-page coding guideline. A colleague asks why you are not just
-    pasting it all into the prompt. What is the strongest honest answer?</p>
-    <button class="opt">RAG is more accurate than a long prompt.</button>
-    <button class="opt">For one document, they are right. RAG is justified by many documents, version filtering, and citations.</button>
-    <button class="opt">The prompt would be too expensive to send.</button>
-    <button class="opt">Language models cannot read documents that long.</button>
-    <div class="fb"><b>Correct answer: the second.</b> Under roughly 200,000 tokens, stuffing the prompt is a
-    legitimate and often better choice, and prompt caching keeps the cost down. Be able to defend the
-    pipeline on scale, versioning, and citations. That honesty is itself a portfolio signal.</div>
+    <p class="stem">A ragdoll user creates a project and uploads one 40-page memo. What should ragdoll do?</p>
+    <button class="opt">Run the full pipeline. Consistency matters more than anything.</button>
+    <button class="opt">Skip retrieval. The corpus fits in one prompt, so put it all in and use prompt caching.</button>
+    <button class="opt">Refuse the project as too small to be useful.</button>
+    <button class="opt">Run the pipeline but set k to 1.</button>
+    <div class="fb"><b>Correct answer: the second.</b> Under roughly 200,000 tokens, stuffing the prompt is
+    legitimate and usually better, because retrieval cannot fetch the wrong passage if there is no
+    retrieval. Ragdoll should measure each project and choose. Knowing when <em>not</em> to retrieve is
+    the mark of someone who has built this before.</div>
   </div>
 
   <div class="q" data-a="2">
@@ -381,7 +388,7 @@ because it produces sentences like "recall@5 rose from 0.61 to 0.84 when I added
 <p>Sources: <a href="https://www.anthropic.com/engineering/contextual-retrieval">Contextual Retrieval in AI Systems — Anthropic Engineering</a> ·
 <a href="https://www.evidentlyai.com/llm-guide/rag-evaluation">RAG evaluation guide — Evidently AI</a> ·
 <a href="https://www.cms.gov/files/document/fy-2026-icd-10-cm-coding-guidelines.pdf">ICD-10-CM Official Guidelines FY 2026 — CMS</a></p>
-<p>Explainer 01 · saved in <code>explainers/</code> · see <code>MISSION.md</code> for why this matters.</p>
+<p>Explainer 01 · <code>ragdoll</code> · saved in <code>explainers/</code> · see <code>MISSION.md</code> for why this matters.</p>
 </footer>
 
 </div>

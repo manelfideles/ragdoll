@@ -9,4 +9,4 @@ many documents, version filtering by date of service, and clickable citations.
 
 **Implications**: the mission is scoped around multiple documents and versioning, not a single PDF.
 Any future session that proposes a retrieval improvement must compare against the prompt-stuffing
-baseline. Status: awaiting evidence that Manuel can restate this unprompted.
+baseline. Status: superseded by LR-0003, which reframes this for a platform.
