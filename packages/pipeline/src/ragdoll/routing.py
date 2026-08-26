@@ -1,12 +1,21 @@
-"""The routing decision: does this project need retrieval at all?
+"""The routing decision: stuff the prompt, or retrieve?
 
-Anthropic's guidance is that a knowledge base under 200,000 tokens, roughly 500
-pages, should simply be placed in the prompt and served with prompt caching. A
-retrieval pipeline cannot fetch the wrong passage if there is no retrieval.
+**This no longer gates ingestion.** Every project is chunked, embedded and indexed when
+its documents are added, whatever its size. That decoupling removes a real production
+failure: under a threshold that gated ingestion, a project which grew past the threshold
+had nothing indexed to fall back on.
 
-Ragdoll never knows in advance how large a project will be, so this is a runtime
-decision per project rather than a one-time judgement. Everything here is pure:
-no file access, no network. That is what makes it cheap to test.
+So the threshold decides at most *how a question gets answered*, never whether work
+happens at ingest time. Whether it survives even in that role is undecided — with a
+200,000-token context window the stuff route covers very little of a real corpus.
+
+``THRESHOLD_TOKENS`` below is inherited from Anthropic's post, where 200,000 happened to
+equal the context window of the models of the day. It has **not** been re-derived for the
+answering model in ``tokens.py``. Treat it as a placeholder, not a validated number: the
+window must also hold the system prompt, the question and the answer, so a real threshold
+sits below the window rather than at it.
+
+Everything here is pure: no file access, no network. That is what makes it cheap to test.
 
 Source: https://www.anthropic.com/engineering/contextual-retrieval
 """
@@ -17,7 +26,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 THRESHOLD_TOKENS = 200_000
-"""Below this, stuff the prompt. At or above it, retrieve."""
+"""Below this, stuff the prompt. At or above it, retrieve.
+
+A placeholder, not a measured value. See the module docstring.
+"""
 
 HYSTERESIS_TOKENS = 20_000
 """Dead zone that stops a project flapping between routes near the threshold.
