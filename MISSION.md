@@ -1,27 +1,39 @@
-# Mission: RAG (Retrieval-Augmented Generation)
+# Mission: RAG — building `ragdoll`
 
 ## Why
-Manuel wants a public, finished side-project that proves he can build production-grade RAG,
-and he wants to actually understand retrieval instead of copying a tutorial. The project is a
-document-management platform for a RAG pipeline that feeds an embeddable chatbot. Medical coders
-ask the chatbot questions about medical coding practice.
+Manuel wants a public, finished side-project that proves he can build production-grade RAG, and he
+wants to genuinely understand retrieval instead of copying a tutorial.
+
+The project is **ragdoll**: a platform for creating RAG pipelines. A user creates a project, uploads
+documents to it through a UI, and then asks questions about those documents. Ragdoll owns the whole
+path from uploaded file to cited answer, so the user never writes retrieval code.
 
 ## Success looks like
-- A deployed platform. You upload a document, it is chunked, embedded and searchable.
-- An embeddable chat widget. One `<script>` tag puts it on any page.
-- Every answer shows its sources. The user can click through to the exact passage.
-- A numeric quality score for retrieval. You can say "recall@5 went from 0.61 to 0.84 when I changed X."
-- You can explain, without notes, why each design choice was made.
+- A deployed web app. Sign in, create a project, drop in files.
+- Ingestion is visible. You can watch a document move through parse, chunk, embed, index, and you
+  can see where it failed.
+- Search works over one project's documents only. No leakage between projects.
+- Every answer shows its sources. Click a citation, land on the exact passage.
+- A numeric retrieval score. You can say "recall@5 rose from 0.61 to 0.84 when I changed X."
+- You can explain, without notes, why each design choice was made, and what you rejected.
 
 ## Constraints
 - 2-4 hours per week. Sessions must be short and must resume from written state.
-- No access to private medical coding documents and no access to working medical coders.
-  We use public documents: the ICD-10-CM Official Guidelines for Coding and Reporting (free from CDC/CMS).
-- Solo build. Prefer managed services over self-hosted infrastructure.
-- Small budget. Free tiers first.
+- Solo build. Prefer managed services over self-hosted infrastructure. Free tiers first.
+- Ragdoll is domain-agnostic, so there is no expert to write the golden set. The evaluation set must
+  be generated from the documents themselves and reviewed by hand.
+- Test corpus: the ICD-10-CM Official Guidelines FY 2026 (121 pages, free from CMS). Dense, real,
+  full of exact identifiers. A hard test, not a friendly one.
 
 ## Out of scope
 - Training or fine-tuning models.
-- Real clinical use. This is a demonstration, not a certified coding tool.
-- HIPAA compliance work. Public guideline documents only, no patient data ever.
-- Multi-tenant billing, SSO, enterprise features.
+- Agents, tool use, multi-step reasoning. Ragdoll retrieves and answers. Nothing more.
+- Real clinical or regulated use. The medical corpus is a test fixture, not a product direction.
+- HIPAA compliance, patient data, SSO, billing, enterprise multi-tenancy.
+- Chat memory and multi-turn conversation, until single-turn retrieval is measurably good.
+
+## The honest risk
+Ragdoll is a platform, so it is a much larger build than a single pipeline. At 2-4 hours per week the
+danger is spending every session on upload screens and job queues and never touching retrieval —
+which is the part being learned, and the part a reviewer would actually probe. The rule for this
+workspace: **no platform feature gets built until the retrieval behind it has a score.**
