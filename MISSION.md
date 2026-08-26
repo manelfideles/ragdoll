@@ -24,7 +24,7 @@ path from uploaded file to cited answer, so the user never writes retrieval code
   be generated from the documents themselves and reviewed by hand.
 - Test corpus: four PDFs Manuel already owns, in `corpus/` (gitignored, not redistributable).
   Designing Data-Intensive Applications (613 pages), Fundamentals of Data Engineering (544),
-  Swim Smooth (360), lakehouses.pdf (8). Roughly 610k tokens in total.
+  Swim Smooth (360), lakehouses.pdf (8). 708,264 tokens in total, counted against `claude-haiku-4-5`.
   This corpus is deliberately awkward, which is why it is a good fixture:
   - `lakehouses.pdf` alone sits far **under** the 200k threshold. Any single book sits **over** it.
     So both branches of the routing decision are testable without inventing data.

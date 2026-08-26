@@ -45,30 +45,42 @@ project, uploads documents, and asks questions about them.
 Four PDFs Manuel owns, held in `corpus/` and gitignored. Not redistributable, so any exercise must
 regenerate derived artefacts from local files rather than committing them.
 
-Token counts below are **exact**, from the Claude API `count_tokens` endpoint against `claude-opus-5`,
-over pypdf text extraction. Reproduce with `make ingest-fresh`.
+Token counts below are **exact**, from the Claude API `count_tokens` endpoint against
+**`claude-haiku-4-5`**, the model ragdoll uses to answer, over pypdf text extraction. Reproduce with
+`make ingest-fresh`.
 
-| Document | Pages | Tokens | Tok/page | Alone |
-|---|---:|---:|---:|---|
-| Designing Data-Intensive Applications | 613 | 481,052 | 784 | retrieve |
-| Fundamentals of Data Engineering | 544 | 291,260 | 535 | retrieve |
-| Swim Smooth | 360 | 190,181 | 528 | stuff |
-| lakehouses.pdf | 8 | 18,338 | 2,292 | stuff |
-| **Whole corpus** | **1,525** | **980,831** | 643 | **retrieve** |
+| Document | Pages | Chars | Tokens | Tok/page | Chars/tok | Alone |
+|---|---:|---:|---:|---:|---:|---|
+| Designing Data-Intensive Applications | 613 | 1,432,397 | 356,264 | 581 | 4.02 | retrieve |
+| Fundamentals of Data Engineering | 544 | 915,448 | 202,989 | 373 | 4.51 | retrieve |
+| Swim Smooth | 360 | 568,519 | 135,659 | 377 | 4.19 | stuff |
+| lakehouses.pdf | 8 | 51,532 | 13,352 | 1,669 | 3.86 | stuff |
+| **Whole corpus** | **1,525** | **2,967,896** | **708,264** | **464** | **4.19** | **retrieve** |
 
-What each one is for:
+**These counts replace an earlier set measured against `claude-opus-5`.** Haiku 4.5 tokenizes the same
+characters into **25.9% to 30.3% fewer tokens**, and 27.8% fewer over the whole corpus. Token counts are
+a property of the model, not of the text. Switching answering models silently rewrites every number a
+routing decision depends on, so `MODEL` in `tokens.py` must track the answering model and every cached
+count must be thrown away when it changes.
 
-- **Designing Data-Intensive Applications** — the retrieval branch, and contextualising chunks against
-  a section rather than a whole document. Nearly 2.5x the threshold on its own.
-- **Fundamentals of Data Engineering** — overlaps DDIA heavily. Precision under near-duplicate content,
-  the hardest retrieval case in the corpus.
-- **Swim Smooth** — unrelated subject matter, so it is the control in project-isolation tests. A leak
-  here is obvious to the eye. Also the most interesting document for routing: at 190,181 tokens it is
-  **9,819 tokens under the threshold**, roughly one chapter from crossing.
-- **lakehouses.pdf** — the prompt-stuffing branch. Also the densest document by far at 2,292 tokens
-  per page against 784 for DDIA, because it is a two-column paper. Page count is a poor proxy for size.
+The offline estimator's `_CHARS_PER_TOKEN = 3.6` **changed direction** with the model. Against Opus 5 it
+ran 12.7% to 21.9% **low**, which is the dangerous direction. Against Haiku 4.5 it runs 7.2% to 25.3%
+**high**, which is the safe one. The constant did not move; the model under it did.
 
-The whole corpus as one project is nearly 5x the threshold; its smallest member is a ninth of it. Both
+What each document is for:
+
+- **Designing Data-Intensive Applications** — the retrieval branch, and contextualising chunks against a
+  section rather than a whole document. 1.8x the threshold on its own.
+- **Fundamentals of Data Engineering** — overlaps DDIA heavily, so it is precision under near-duplicate
+  content, the hardest retrieval case in the corpus. It is also now **the borderline document for
+  routing, at 2,989 tokens over the threshold** — roughly a chapter from flipping route.
+- **Swim Smooth** — unrelated subject matter, so it is the control in project-isolation tests. A leak is
+  obvious to the eye. Under Opus 5 counts it was the borderline document at 9,819 tokens under the
+  threshold; under Haiku 4.5 it sits 64,341 under and is no longer close.
+- **lakehouses.pdf** — the prompt-stuffing branch. Also the densest document by far at 1,669 tokens per
+  page against 581 for DDIA, because it is a two-column paper. Page count is a poor proxy for size.
+
+The whole corpus as one project is 3.5x the threshold; its smallest member is a fifteenth of it. Both
 branches of the routing decision are testable with no synthetic data.
 
 ## Wisdom (Communities)

@@ -18,7 +18,13 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-MODEL = "claude-opus-5"
+MODEL = "claude-haiku-4-5"
+"""The model that will read these prompts, so the model whose tokenizer decides the count.
+
+Token counts are model-specific. This constant is not a cost dial — ``count_tokens`` runs
+no inference. It must track whichever model ragdoll uses to answer, or the number means
+nothing. Changing it invalidates every cached count.
+"""
 
 _CHARS_PER_TOKEN = 3.6
 """Crude prose ratio for the offline estimator. Not a tokenizer."""
