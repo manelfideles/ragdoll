@@ -22,8 +22,16 @@ path from uploaded file to cited answer, so the user never writes retrieval code
 - Solo build. Prefer managed services over self-hosted infrastructure. Free tiers first.
 - Ragdoll is domain-agnostic, so there is no expert to write the golden set. The evaluation set must
   be generated from the documents themselves and reviewed by hand.
-- Test corpus: the ICD-10-CM Official Guidelines FY 2026 (121 pages, free from CMS). Dense, real,
-  full of exact identifiers. A hard test, not a friendly one.
+- Test corpus: four PDFs Manuel already owns, in `corpus/` (gitignored, not redistributable).
+  Designing Data-Intensive Applications (613 pages), Fundamentals of Data Engineering (544),
+  Swim Smooth (360), lakehouses.pdf (8). Roughly 610k tokens in total.
+  This corpus is deliberately awkward, which is why it is a good fixture:
+  - `lakehouses.pdf` alone sits far **under** the 200k threshold. Any single book sits **over** it.
+    So both branches of the routing decision are testable without inventing data.
+  - Two of the books overlap heavily in subject, which is the hard case for retrieval precision.
+  - Swim Smooth is unrelated to the others, so it is the control for project isolation.
+  - Books have deep section trees, so contextual retrieval must work against a section rather than a
+    whole document. Layout-aware parsing is therefore not optional.
 
 ## Out of scope
 - Training or fine-tuning models.

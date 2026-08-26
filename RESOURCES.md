@@ -42,12 +42,20 @@ project, uploads documents, and asks questions about them.
 
 ## Test corpus
 
-- [ICD-10-CM Official Guidelines FY 2026 — CMS](https://www.cms.gov/files/document/fy-2026-icd-10-cm-coding-guidelines.pdf)
-  121 pages. Dense rules, nested headings, tables, and exact identifiers such as `E11.9`. A deliberately
-  hard test fixture, not a product direction. Download with:
-  `curl -sSL -o corpus/icd-10-cm-guidelines-fy2026.pdf <url>`
-- [ICD-10-PCS Official Guidelines 2026 — CMS](https://www.cms.gov/files/document/2026-official-icd-10-pcs-coding-guidelines.pdf)
-  A second document. Use for: testing that project-scoped search does not blur two similar corpora.
+Four PDFs Manuel owns, held in `corpus/` and gitignored. Not redistributable, so any exercise must
+regenerate derived artefacts from local files rather than committing them.
+
+- **Designing Data-Intensive Applications** — 613 pages, ~245k tokens. Over the threshold on its own.
+  Use for: the retrieval branch, and contextualising chunks against a section rather than a document.
+- **Fundamentals of Data Engineering** — 544 pages, ~218k tokens. Overlaps DDIA heavily.
+  Use for: precision under near-duplicate content, the hardest retrieval case in the corpus.
+- **Swim Smooth** — 360 pages. Unrelated subject matter.
+  Use for: the control in project-isolation tests. A leak here is obvious to the eye.
+- **lakehouses.pdf** — 8 pages, ~3k tokens. Far under the threshold.
+  Use for: the prompt-stuffing branch of the routing decision.
+
+Total is roughly 610k tokens, so the full corpus as one project is over the threshold while its
+smallest member is well under. Both branches are testable with no synthetic data.
 
 ## Wisdom (Communities)
 

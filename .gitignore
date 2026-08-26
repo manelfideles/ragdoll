@@ -7,3 +7,8 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+
+# derived artefacts from a copyrighted corpus
+corpus/**/*.txt
+corpus/**/*.jsonl
+.chunks/
