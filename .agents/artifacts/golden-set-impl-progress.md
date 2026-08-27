@@ -11,8 +11,8 @@ created: 2026-08-27
 |-------|------------------------------------------------------|------|-------------|-----------|
 | S1    | Page-level parse and seeded stratified sample         | AFK  | complete    | 2026-08-27 |
 | S2    | Normalised quote lookup with index table              | AFK  | complete    | 2026-08-27 |
-| S3    | One real Opus 5 call, one candidate on disk           | HITL | in_progress | —         |
-| S4    | Filters, echo score, full 50-page run                 | AFK  | pending     | —         |
+| S3    | One real Opus 5 call, one candidate on disk           | HITL | complete    | 2026-08-27 |
+| S4    | Filters, echo score, full 50-page run                 | AFK  | in_progress | —         |
 | S5    | Resumable review loop, pass one of 30                 | HITL | pending     | —         |
 | S6    | Prompt fix, sample extension, pass two to 50 accepted | HITL | pending     | —         |
 | S7    | Documentation correction                              | AFK  | pending     | —         |

@@ -209,13 +209,54 @@ def golden_generate(
     order = golden_set.sample_pages(eligible, seed=seed)
     chosen = order[:limit]
 
-    _report_sample(pages_by_document, eligible, order, chosen, seed)
-
     if dry_run:
+        _report_sample(pages_by_document, eligible, order, chosen, seed)
         return
 
-    console.print("[yellow]Generation is not implemented yet. Use --dry-run.[/yellow]")
-    raise typer.Exit(1)
+    if not tokens.has_credentials():
+        console.print(
+            "[red]No ANTHROPIC_API_KEY found.[/red] Generation needs the API. "
+            "Use --dry-run to see the sample without it."
+        )
+        raise typer.Exit(1)
+
+    from anthropic import Anthropic
+
+    target = golden_set.candidates_path()
+    console.print(f"\n  Writing to      [bold]{target}[/bold]")
+    console.print(f"  Model           {golden_set.GENERATOR_MODEL}")
+    console.print(f"  Prompt          {golden_set.PROMPT_VERSION}\n")
+
+    kept: list[golden_set.Candidate] = []
+    dropped: list[golden_set.Outcome] = []
+    client = Anthropic()
+
+    for position, outcome in enumerate(
+        golden_set.generate(client, pages_by_document, chosen, seed=seed, path=target), start=1
+    ):
+        prefix = (
+            f"  {position:>3}/{len(chosen)}  {outcome.ref.document[:28]:<28} p{outcome.ref.page:<5}"
+        )
+        if outcome.candidate is None:
+            dropped.append(outcome)
+            console.print(f"{prefix} [yellow]dropped — {outcome.reason}[/yellow]")
+            continue
+        kept.append(outcome.candidate)
+        marks = []
+        if outcome.candidate.match_count > 1:
+            marks.append(f"[magenta]{outcome.candidate.match_count} matches[/magenta]")
+        if outcome.dehyphenated:
+            marks.append("[cyan]rejoined[/cyan]")
+        suffix = ("  " + " ".join(marks)) if marks else ""
+        console.print(
+            f"{prefix} [green]kept[/green] echo {outcome.candidate.echo_score:.2f}{suffix}"
+        )
+        console.print(f"        [dim]Q:[/dim] {outcome.candidate.question}")
+
+    console.print()
+    console.print(f"  Kept            [bold]{len(kept)}[/bold] of {len(chosen)}")
+    console.print(f"  Dropped         {len(dropped)}")
+    console.print()
 
 
 def _report_sample(
