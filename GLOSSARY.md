@@ -41,35 +41,3 @@ best few. Buys accuracy without paying to put every candidate in the prompt.
 Prepending 50 to 100 model-written tokens to each chunk, explaining where the chunk sits in its
 document, before embedding and indexing it. Cut Anthropic's retrieval failure rate by 35%.
 _Avoid_: Context injection, chunk enrichment, contextual chunking
-
-## Deciding whether to retrieve
-
-**Prompt caching**:
-Storing a processed prompt on the server so that sending the same documents again costs far less.
-What makes stuffing the prompt affordable.
-
-**Prompt stuffing**:
-Putting the whole document set in the prompt and skipping retrieval entirely. The baseline that any
-retrieval pipeline must beat.
-_Avoid_: Long-context RAG, full-context mode
-
-**The 200k threshold**:
-Anthropic's guidance that a knowledge base under 200,000 tokens, about 500 pages, should be stuffed
-rather than retrieved. In this workspace it is a **per-project runtime decision**, not a one-time
-judgement: ragdoll counts a project's tokens and routes.
-
-## Measuring it
-
-**Golden set**:
-A list of questions, each paired with the passage that truly answers it. The artefact that makes every
-later change measurable. Built before the pipeline, not after.
-_Avoid_: Test set, eval set, benchmark, ground truth dataset
-
-## Pending
-
-Terms taught but not yet demonstrated. They move up when Manuel uses them correctly on real numbers.
-
-- **recall@k** — of all the passages that truly answer a question, how many appeared in the top k.
-  Promote once he has computed one against the golden set.
-- **Project isolation** — keeping one ragdoll project's chunks out of another project's search results.
-- **Precision@k**, **hit rate**, **NDCG@k** — defined in the Evidently guide, not yet taught here.

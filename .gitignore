@@ -9,8 +9,8 @@ __pycache__/
 .venv/
 
 # derived artefacts from a copyrighted corpus
-corpus/**/*.txt
-corpus/**/*.jsonl
+corpus/**/*
+corpus/**/*
 .chunks/
 
 # uv / python
