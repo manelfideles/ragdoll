@@ -266,6 +266,26 @@ different prompts are not the same instrument, and the file has to say which one
 
 _MAX_TOKENS = 4000
 
+REJECT_PHRASES = (
+    "this passage",
+    "this text",
+    "this chapter",
+    "this document",
+    "the excerpt",
+    "above",
+)
+"""Phrases that prove a question cannot stand alone.
+
+A question containing one of these was written for a reader who is already looking at
+the page. At scoring time there is no page, only a search box, so such a question
+measures nothing. These are rejected automatically, before the quote is even checked:
+it is the one judgement a machine can make as well as a human.
+"""
+
+_REJECT_PATTERNS = tuple(
+    (phrase, re.compile(rf"\b{re.escape(phrase)}\b", re.IGNORECASE)) for phrase in REJECT_PHRASES
+)
+
 _STOPWORDS = frozenset(
     [
         "about",
@@ -425,6 +445,17 @@ def echo_score(question: str, quote: str) -> float:
     return len(asked & uncommon_words(quote)) / len(asked)
 
 
+def generic_reference(question: str) -> str | None:
+    """The phrase that makes a question depend on its page, or None if it stands alone.
+
+    Matched on word boundaries, so ``aboveground`` is not the word ``above``.
+    """
+    for phrase, pattern in _REJECT_PATTERNS:
+        if pattern.search(question):
+            return phrase
+    return None
+
+
 def page_window(pages: Sequence[str], page: int) -> str:
     """The sampled page with one page either side, clamped at the document ends.
 
@@ -518,6 +549,7 @@ class Outcome:
     ref: PageRef
     candidate: Candidate | None = None
     reason: str | None = None
+    detail: str | None = None
     dehyphenated: bool = False
 
     @property
@@ -569,9 +601,18 @@ def generate(
             yield Outcome(ref=ref, reason="model refused")
             continue
 
+        phrase = generic_reference(generated.question)
+        if phrase is not None:
+            yield Outcome(
+                ref=ref, reason=f"question says {phrase!r}", detail=generated.question.strip()
+            )
+            continue
+
         lookup = find_quote(pages[ref.page - 1], generated.quote)
         if not lookup.found:
-            yield Outcome(ref=ref, reason="quote not on the page")
+            # Loud on purpose. Either the model invented a sentence or the parser
+            # produced text no reader would recognise, and both are worth seeing.
+            yield Outcome(ref=ref, reason="quote not on the page", detail=generated.quote.strip())
             continue
 
         candidate = Candidate(

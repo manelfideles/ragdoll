@@ -240,6 +240,8 @@ def golden_generate(
         if outcome.candidate is None:
             dropped.append(outcome)
             console.print(f"{prefix} [yellow]dropped — {outcome.reason}[/yellow]")
+            if outcome.detail:
+                console.print(f"        [yellow]![/yellow] {outcome.detail[:300]}")
             continue
         kept.append(outcome.candidate)
         marks = []
@@ -256,6 +258,41 @@ def golden_generate(
     console.print()
     console.print(f"  Kept            [bold]{len(kept)}[/bold] of {len(chosen)}")
     console.print(f"  Dropped         {len(dropped)}")
+    for reason in sorted({outcome.reason or "?" for outcome in dropped}):
+        count = sum(1 for outcome in dropped if outcome.reason == reason)
+        console.print(f"                  {count:>3}  {reason}")
+    console.print()
+    _report_echo(kept)
+
+
+def _report_echo(kept: list[golden_set.Candidate]) -> None:
+    """Print the echo score distribution.
+
+    Printed and never thresholded. The point is to see whether the questions lean on
+    the passage's vocabulary, and a shape is the only honest way to see that: one
+    number would hide a bimodal split, and a cutoff would throw away the questions
+    that must name their subject to make sense.
+    """
+    if not kept:
+        return
+
+    scores = sorted(candidate.echo_score for candidate in kept)
+    middle = scores[len(scores) // 2]
+    console.print("  Echo score distribution")
+    for lower in range(0, 10):
+        low, high = lower / 10, (lower + 1) / 10
+        count = sum(1 for score in scores if low <= score < high or (lower == 9 and score == 1.0))
+        bar = "█" * count
+        console.print(f"    {low:.1f} to {high:.1f}  {count:>3}  [cyan]{bar}[/cyan]")
+    console.print(
+        f"\n    min {scores[0]:.2f}   median {middle:.2f}   max {scores[-1]:.2f}"
+        "   [dim](printed, never used to reject)[/dim]"
+    )
+    ambiguous = [c for c in kept if c.match_count > 1]
+    if ambiguous:
+        console.print(f"\n  [magenta]{len(ambiguous)} quote(s) match their page more than once:")
+        for candidate in ambiguous:
+            console.print(f"    {candidate.id}  {candidate.match_count} matches[/magenta]")
     console.print()
 
 
