@@ -29,15 +29,24 @@ class ParsedDocument:
         return len(self.text)
 
 
-def parse_pdf(path: Path) -> ParsedDocument:
-    """Extract plain text from a PDF, one page at a time.
+def parse_pages(path: Path) -> list[str]:
+    """Extract a PDF as one string per page, in document order.
 
     Pages that yield nothing are kept as empty strings rather than dropped, so the
     page count stays honest. A page that extracts to nothing is usually a scan, and
     a corpus full of them means you need OCR, not a better chunker.
+
+    The golden set anchors ground truth to a page number, so the page boundaries
+    have to survive parsing. Joining first and splitting later would not recover
+    them: a page break and a paragraph break look identical once joined.
     """
     reader = PdfReader(path)
-    pages = [(page.extract_text() or "") for page in reader.pages]
+    return [(page.extract_text() or "") for page in reader.pages]
+
+
+def parse_pdf(path: Path) -> ParsedDocument:
+    """Extract plain text from a PDF as one joined string."""
+    pages = parse_pages(path)
     return ParsedDocument(path=path, pages=len(pages), text="\n\n".join(pages))
 
 

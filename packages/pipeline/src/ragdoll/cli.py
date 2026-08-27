@@ -15,12 +15,17 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from ragdoll import golden as golden_set
 from ragdoll import routing, tokens
 from ragdoll.cache import IngestCache
 from ragdoll.config import load_env
 from ragdoll.parse import find_pdfs, parse_pdf
 
 app = typer.Typer(add_completion=False, help="ragdoll — build and measure RAG pipelines locally.")
+golden_app = typer.Typer(
+    add_completion=False, help="Build and review the golden set of scoring questions."
+)
+app.add_typer(golden_app, name="golden")
 console = Console()
 
 
@@ -174,6 +179,84 @@ def route(
     decision = routing.decide(total_tokens, already_indexed=indexed)
     console.print(f"[bold]{decision.route.upper()}[/bold] — {decision.reason}")
     console.print(f"headroom: {decision.headroom:,}")
+
+
+@golden_app.command("generate")
+def golden_generate(
+    directory: Annotated[
+        Path, typer.Argument(help="Directory of PDFs to sample pages from.")
+    ] = Path("corpus"),
+    limit: Annotated[
+        int, typer.Option("--limit", help="How many pages to take from the sample order.")
+    ] = golden_set.TARGET_ACCEPTED,
+    seed: Annotated[int, typer.Option("--seed", help="Sampling seed.")] = golden_set.DEFAULT_SEED,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Print the sampled pages and stop. No API calls.")
+    ] = False,
+) -> None:
+    """Sample pages and write question candidates. Never writes the reviewed set."""
+    if not directory.is_dir():
+        console.print(f"[red]No such directory:[/red] {directory}")
+        raise typer.Exit(1)
+
+    with console.status(f"parsing {directory}"):
+        pages_by_document = golden_set.collect_pages(directory)
+    if not pages_by_document:
+        console.print(f"[yellow]No PDFs found in[/yellow] {directory}")
+        raise typer.Exit(1)
+
+    eligible = {name: golden_set.eligible_pages(pages) for name, pages in pages_by_document.items()}
+    order = golden_set.sample_pages(eligible, seed=seed)
+    chosen = order[:limit]
+
+    _report_sample(pages_by_document, eligible, order, chosen, seed)
+
+    if dry_run:
+        return
+
+    console.print("[yellow]Generation is not implemented yet. Use --dry-run.[/yellow]")
+    raise typer.Exit(1)
+
+
+def _report_sample(
+    pages_by_document: dict[str, list[str]],
+    eligible: dict[str, list[int]],
+    order: list[golden_set.PageRef],
+    chosen: list[golden_set.PageRef],
+    seed: int,
+) -> None:
+    strata = Table(title="Eligible pages per document", title_justify="left", header_style="bold")
+    strata.add_column("Document")
+    strata.add_column("Pages", justify="right")
+    strata.add_column("Eligible", justify="right")
+    strata.add_column("Skipped", justify="right")
+    strata.add_column("Sampled", justify="right")
+
+    for name in sorted(pages_by_document):
+        total = len(pages_by_document[name])
+        usable = len(eligible[name])
+        taken = sum(1 for ref in chosen if ref.document == name)
+        strata.add_row(name[:44], f"{total:,}", f"{usable:,}", f"{total - usable:,}", f"{taken:,}")
+
+    console.print()
+    console.print(strata)
+
+    sample = Table(title=f"Sample (seed {seed})", title_justify="left", header_style="bold")
+    sample.add_column("#", justify="right")
+    sample.add_column("Document")
+    sample.add_column("Page", justify="right")
+    sample.add_column("Chars", justify="right")
+
+    for position, ref in enumerate(chosen, start=1):
+        text = pages_by_document[ref.document][ref.page - 1]
+        sample.add_row(str(position), ref.document[:44], str(ref.page), f"{len(text):,}")
+
+    console.print()
+    console.print(sample)
+    console.print()
+    console.print(f"  Sample order    {len(order):,} pages, of which {len(chosen):,} taken")
+    console.print(f"  Distinct        {len({(r.document, r.page) for r in chosen}):,}")
+    console.print()
 
 
 if __name__ == "__main__":
