@@ -33,6 +33,10 @@ def open_document(path: str) -> pdf.Document:
     return pdf.open(path)
 
 
+class Keywords(BaseModel):
+    keywords: list[str] = Field(..., min_length=1, max_length=3)
+
+
 @dataclass(frozen=True, slots=True)
 class ParsedQuery:
     query: str
@@ -60,11 +64,17 @@ class ParsedQuery:
             query=self.normalized_query,
             glossary=glossary,
         )
-        contents = client.models.generate_content(
+        keywords = client.models.generate_content(
             model=CHAT_MODEL,
             contents=prompt,
-        ).text
-        keywords = contents.split("\n")[:3]
+            config=genai.types.GenerateContentConfig(
+                temperature=0,
+                top_k=1,
+                seed=42,
+                response_schema=Keywords,
+                thinking_config=genai.types.ThinkingConfig(thinking_level="low"),
+            ),
+        ).parsed.keywords
         return keywords
 
 
@@ -171,13 +181,7 @@ class Answer(BaseModel):
     caveats: list[str] = Field(default_factory=list)
 
     def __str__(self):
-        return f"""
-Answer: {self.text}
-Confidence: {self.confidence}
-Justification: {self.justification}
-Evidence: {self.quotes}
-Coordinates: {self.start_line_num} (p. {self.start_page_num}) - {self.end_line_num} (p. {self.end_page_num})
-"""
+        return f"Answer (lines {self.start_line_num} (p. {self.start_page_num}) to {self.end_line_num} (p. {self.end_page_num})): {self.text}"
 
 
 def llm_answer(query: str, relevant_lines: str, client: genai.Client) -> Answer:
@@ -197,14 +201,12 @@ def llm_answer(query: str, relevant_lines: str, client: genai.Client) -> Answer:
 def pipeline(query: str, path: str):
     client = llm_client()
     keywords = parse_query(query, client)
-    print()
-    print(" --- Keywords:", keywords, "---")
+    print("keywords:", keywords)
     # keywords = ["feeling the water", "learning how to swim"]
     doc = open_document(path)
     lines = parse_document(doc)
     pages = get_document_pages(lines)
     _, relevant_lines = keyword_retrieval(pages, lines, keywords)
-    print(relevant_lines)
     answer = llm_answer(query, relevant_lines, client)
     print(answer)
 

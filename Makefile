@@ -1,8 +1,8 @@
 # ragdoll — shorthands. Run `make` or `make help` for the list.
 # Everything here runs locally. Nothing deploys.
 
-.DEFAULT_GOAL := help
-.PHONY: help 
+.DEFAULT_GOAL := help run
+.PHONY: help run
 
 UV := uv
 
